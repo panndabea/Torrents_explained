@@ -74,5 +74,22 @@ const Hasher = (() => {
     return { modified: copy, byteIndex, original, flipped: view[byteIndex] };
   }
 
-  return { hashPiece, hashAllPieces, hashBuffer, formatHash, flipRandomByte };
+  /**
+   * Return a copy of a piece's data with a specific byte modified.
+   * The byteIndex is clamped to [0, view.length - 1] if out of bounds.
+   * The bit position within the byte is chosen randomly.
+   * @param {ArrayBuffer} pieceData
+   * @param {number} byteIndex  index to modify (clamped to valid range)
+   * @returns {{modified:ArrayBuffer, byteIndex:number, original:number, flipped:number}}
+   */
+  function flipSpecificByte(pieceData, byteIndex) {
+    const copy = pieceData.slice(0);
+    const view = new Uint8Array(copy);
+    const idx = Math.min(byteIndex, view.length - 1);
+    const original = view[idx];
+    view[idx] = original ^ (1 << Math.floor(Math.random() * 8));
+    return { modified: copy, byteIndex: idx, original, flipped: view[idx] };
+  }
+
+  return { hashPiece, hashAllPieces, hashBuffer, formatHash, flipRandomByte, flipSpecificByte };
 })();

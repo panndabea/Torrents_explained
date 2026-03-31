@@ -87,9 +87,15 @@
           <h2>Meet Your File</h2>
         </div>
 
+        <div class="why-matters">
+          <span class="why-icon">💡</span>
+          <div><strong>Why this matters:</strong> Understanding file structure helps you see why BitTorrent can resume interrupted downloads and verify data piece by piece.</div>
+        </div>
+
         <div class="explanation-toggle">
           <button class="toggle-btn active" data-mode="simple">Simple</button>
           <button class="toggle-btn" data-mode="technical">Technical</button>
+          <button class="toggle-btn" data-mode="deep">Deep Dive</button>
         </div>
 
         <div class="explanation simple">
@@ -106,6 +112,15 @@
             These hashes are stored in the <code>.torrent</code> metainfo file.
             When a peer downloads a piece, it hashes it and compares to the expected hash —
             ensuring data integrity even when downloading from untrusted peers.
+          </p>
+        </div>
+        <div class="explanation deep hidden">
+          <p>
+            BitTorrent clients compute SHA-1 over the raw piece bytes using the <code>SubtleCrypto</code> Web API
+            (<code>crypto.subtle.digest('SHA-1', buffer)</code>). The 160-bit (20-byte) digest is stored in the
+            <code>.torrent</code> info dictionary under the key <code>pieces</code> as a concatenated binary string.
+            The info-hash — SHA-1 of the entire bencoded info dict — acts as the torrent's globally unique identifier
+            used in DHT (<em>Distributed Hash Table</em>) lookups and magnet links.
           </p>
         </div>
 
@@ -158,9 +173,15 @@
           <h2>Choose Your Piece Size</h2>
         </div>
 
+        <div class="why-matters">
+          <span class="why-icon">💡</span>
+          <div><strong>Why this matters:</strong> Piece size is the key tradeoff that determines download speed, overhead, and torrent file size.</div>
+        </div>
+
         <div class="explanation-toggle">
           <button class="toggle-btn active" data-mode="simple">Simple</button>
           <button class="toggle-btn" data-mode="technical">Technical</button>
+          <button class="toggle-btn" data-mode="deep">Deep Dive</button>
         </div>
 
         <div class="explanation simple">
@@ -177,6 +198,15 @@
             requests), but enable finer-grained download scheduling and faster piece completion.
             Larger pieces reduce overhead but mean you must download more before verifying integrity.
             Typical values range from 256 KiB (small files) to 4 MiB (large files &gt; 1 GB).
+          </p>
+        </div>
+        <div class="explanation deep hidden">
+          <p>
+            The optimal piece size minimizes <code>torrent_file_size = num_pieces × 20 bytes</code> while keeping
+            verification latency acceptable. With 16 KiB pieces a 1 GiB file requires 65,536 SHA-1 hashes (1.28 MiB
+            of hash data), whereas 4 MiB pieces reduce that to 256 hashes (5 KiB). Most modern clients use
+            power-of-two sizes between 512 KiB and 4 MiB. BitTorrent v2 switches to SHA-256 and a Merkle tree
+            structure allowing per-block (16 KiB) verification without increasing torrent file size.
           </p>
         </div>
 
@@ -216,6 +246,19 @@
           </div>
 
           <div id="pieceSizePreview"></div>
+
+          <!-- Predict → Reveal: piece count -->
+          <div class="predict-reveal" id="predictPieces">
+            <div class="predict-question">
+              <span class="predict-icon">🤔</span>
+              <strong>Prediction check:</strong> How many pieces do you think this file will be split into with the selected size?
+            </div>
+            <div class="predict-input-row">
+              <input type="number" id="pieceCountGuess" class="predict-input" min="1" placeholder="Your guess…" aria-label="Guess piece count">
+              <button class="btn btn-secondary predict-submit" id="submitPieceGuess">Check</button>
+            </div>
+            <div class="predict-reveal-result hidden" id="pieceGuessResult"></div>
+          </div>
         </div>
 
       </div>
@@ -233,9 +276,15 @@
           <h2>Splitting Into Pieces</h2>
         </div>
 
+        <div class="why-matters">
+          <span class="why-icon">💡</span>
+          <div><strong>Why this matters:</strong> Splitting allows many peers to exchange different parts in parallel, making downloads faster as more people join.</div>
+        </div>
+
         <div class="explanation-toggle">
           <button class="toggle-btn active" data-mode="simple">Simple</button>
           <button class="toggle-btn" data-mode="technical">Technical</button>
+          <button class="toggle-btn" data-mode="deep">Deep Dive</button>
         </div>
 
         <div class="explanation simple">
@@ -251,6 +300,15 @@
             a <code>start</code> and <code>end</code> byte offset. The last piece may be smaller
             than the piece length. Pieces are identified by a zero-based index. Click any piece
             to inspect its byte range and a hex dump of its first 32 bytes.
+          </p>
+        </div>
+        <div class="explanation deep hidden">
+          <p>
+            Piece boundaries are strictly byte-aligned and non-overlapping: piece <em>i</em> spans bytes
+            <code>[i × piece_length, min((i+1) × piece_length, file_size))</code>. The last piece is often shorter.
+            Clients use a bitmask (<em>bitfield</em>) to track which pieces they have; this bitfield is exchanged
+            in the BitTorrent handshake. Piece availability is distributed non-uniformly: the rarest piece is
+            prioritized to maintain swarm health (rarest-first algorithm).
           </p>
         </div>
 
@@ -286,6 +344,16 @@
             <span id="piecesCountLabel">— pieces</span>
             <span class="pieces-note" id="piecesNote"></span>
           </div>
+
+          <div class="myth-fact-cards">
+            <div class="myth-fact-card myth">
+              <span class="myth-fact-icon">✗</span>
+              <div>
+                <strong>Myth:</strong> Pieces are downloaded in order, from start to finish.
+                <span class="myth-fact-truth">Peers use a <em>rarest-first</em> algorithm — they download whichever pieces are least available in the swarm first, not sequential order.</span>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -303,9 +371,15 @@
           <h2>Computing Piece Hashes</h2>
         </div>
 
+        <div class="why-matters">
+          <span class="why-icon">💡</span>
+          <div><strong>Why this matters:</strong> Hashes let clients instantly detect corrupted or tampered data — bad pieces are rejected before they spread.</div>
+        </div>
+
         <div class="explanation-toggle">
           <button class="toggle-btn active" data-mode="simple">Simple</button>
           <button class="toggle-btn" data-mode="technical">Technical</button>
+          <button class="toggle-btn" data-mode="deep">Deep Dive</button>
         </div>
 
         <div class="explanation simple">
@@ -326,8 +400,32 @@
             produce completely different outputs.
           </p>
         </div>
+        <div class="explanation deep hidden">
+          <p>
+            SHA-1 processes data in 512-bit (64-byte) blocks through 80 rounds of mixing operations producing a
+            160-bit digest. The avalanche effect guarantees that flipping a single input bit changes ~50% of output
+            bits — making it infeasible to forge a piece that passes verification. While SHA-1 has known collision
+            vulnerabilities in cryptographic contexts, its use in BitTorrent (integrity checking, not authentication)
+            remains practically sound. BitTorrent v2 upgrades to SHA-256 for stronger guarantees.
+          </p>
+        </div>
 
         <div class="hashing-section">
+          <!-- Predict → Reveal: avalanche effect -->
+          <div class="predict-reveal" id="predictHash">
+            <div class="predict-question">
+              <span class="predict-icon">🤔</span>
+              <strong>Prediction check:</strong> If you change a single byte in a piece, how many characters of its SHA-1 hash do you expect to change?
+            </div>
+            <div class="predict-choices" id="hashPredictChoices">
+              <button class="predict-choice" data-answer="wrong1">1–2 characters</button>
+              <button class="predict-choice" data-answer="wrong2">About half</button>
+              <button class="predict-choice" data-answer="correct">Almost all of them</button>
+              <button class="predict-choice" data-answer="wrong3">None — hashes are stable</button>
+            </div>
+            <div class="predict-reveal-result hidden" id="hashPredictResult"></div>
+          </div>
+
           <div class="hashing-controls">
             <button class="btn btn-primary" id="startHashingBtn">
               <span class="btn-icon">🔐</span>
@@ -348,6 +446,20 @@
               <p>Flip a random bit in piece&nbsp;#0 — watch the hash change completely!</p>
             </div>
             <div class="flip-demo-body">
+              <div class="flip-byte-controls">
+                <label class="flip-byte-label" for="flipByteIndex">Choose byte to modify (0–31):</label>
+                <input type="number" id="flipByteIndex" class="flip-byte-input" min="0" max="31" value="0" aria-label="Byte index to flip">
+                <button class="btn btn-secondary" id="flipByteBtn">
+                  ✏️ Modify This Byte
+                </button>
+                <button class="btn btn-secondary" id="flipRandomBtn">
+                  🎲 Random Byte
+                </button>
+              </div>
+              <div class="flip-byte-info hidden" id="flipByteInfo">
+                Position <strong id="flipInfoPos">—</strong>:
+                <code id="flipInfoOld">—</code> → <code id="flipInfoNew">—</code>
+              </div>
               <div class="flip-cols">
                 <div class="flip-col">
                   <div class="flip-label">Original Piece #0</div>
@@ -359,16 +471,47 @@
                 <div class="flip-col">
                   <div class="flip-label">
                     Modified Piece #0
-                    <span class="badge-modified">1 byte flipped</span>
+                    <span class="badge-modified" id="flipBadge" style="display:none">1 byte changed</span>
                   </div>
                   <div class="hex-bytes" id="modifiedBytes"></div>
                   <div class="flip-hash-label">SHA-1 Hash:</div>
                   <div class="hash-display" id="modifiedHash"></div>
                 </div>
               </div>
-              <button class="btn btn-secondary" id="flipByteBtn">
-                🎲 Flip a Random Byte
-              </button>
+              <div class="hash-diff-summary hidden" id="hashDiffSummary"></div>
+            </div>
+          </div><!-- /flip-demo -->
+
+          <!-- Error Simulation -->
+          <div class="error-sim" id="errorSim" style="display:none">
+            <div class="error-sim-header">
+              <h3>🚨 Error Simulation: Corrupted Piece</h3>
+              <p>Watch what happens when a peer receives a damaged piece.</p>
+            </div>
+            <div class="error-sim-body">
+              <div class="error-sim-flow">
+                <div class="error-sim-step" id="errStep1">
+                  <div class="err-step-icon">📦</div>
+                  <div class="err-step-label">Piece arrives</div>
+                </div>
+                <div class="error-sim-arrow">→</div>
+                <div class="error-sim-step" id="errStep2">
+                  <div class="err-step-icon">🔐</div>
+                  <div class="err-step-label">Hash computed</div>
+                </div>
+                <div class="error-sim-arrow">→</div>
+                <div class="error-sim-step" id="errStep3">
+                  <div class="err-step-icon">⚖️</div>
+                  <div class="err-step-label">Hashes compared</div>
+                </div>
+                <div class="error-sim-arrow">→</div>
+                <div class="error-sim-step" id="errStep4">
+                  <div class="err-step-icon">❌</div>
+                  <div class="err-step-label">Piece rejected</div>
+                </div>
+              </div>
+              <div class="error-sim-detail" id="errorSimDetail"></div>
+              <button class="btn btn-secondary" id="runErrorSimBtn">▶ Simulate Corrupted Piece</button>
             </div>
           </div>
 
@@ -397,9 +540,15 @@
           <h2>Torrent Metadata Structure</h2>
         </div>
 
+        <div class="why-matters">
+          <span class="why-icon">💡</span>
+          <div><strong>Why this matters:</strong> The .torrent file describes how to rebuild the original file without containing it — it's a recipe, not the food.</div>
+        </div>
+
         <div class="explanation-toggle">
           <button class="toggle-btn active" data-mode="simple">Simple</button>
           <button class="toggle-btn" data-mode="technical">Technical</button>
+          <button class="toggle-btn" data-mode="deep">Deep Dive</button>
         </div>
 
         <div class="explanation simple">
@@ -419,6 +568,15 @@
             as the key in the <strong>DHT</strong> (Distributed Hash Table). Trackers,
             magnet links (<code>magnet:?xt=urn:btih:&lt;info-hash&gt;</code>), and peers
             all reference this hash.
+          </p>
+        </div>
+        <div class="explanation deep hidden">
+          <p>
+            The info-hash is computed as SHA-1 of the bencoded info dictionary — a deterministic encoding where
+            dictionary keys are sorted lexicographically. Even adding a single space to the file name produces a
+            completely different info-hash, making it impossible to accidentally collide. Magnet links encode the
+            info-hash as <code>magnet:?xt=urn:btih:&lt;40-hex-or-32-base32&gt;</code>. The DHT stores peers under
+            this key. Trackers use it to group peers. The info-hash is the torrent's global identity.
           </p>
         </div>
 
@@ -461,6 +619,23 @@
           </div>
         </div>
 
+        <div class="myth-fact-cards" style="margin-top:20px">
+          <div class="myth-fact-card myth">
+            <span class="myth-fact-icon">✗</span>
+            <div>
+              <strong>Myth:</strong> A .torrent file contains the actual file data.
+              <span class="myth-fact-truth">It only contains metadata: file name, size, piece length, and SHA-1 hashes. The actual file data is distributed across peers.</span>
+            </div>
+          </div>
+          <div class="myth-fact-card myth">
+            <span class="myth-fact-icon">✗</span>
+            <div>
+              <strong>Myth:</strong> Hashes are a compressed form of the data.
+              <span class="myth-fact-truth">SHA-1 is a one-way function — you cannot reconstruct data from its hash. It's a fingerprint, not a compression algorithm.</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section><!-- /step-5 -->
 
@@ -476,9 +651,15 @@
           <h2>Network Distribution Simulation</h2>
         </div>
 
+        <div class="why-matters">
+          <span class="why-icon">💡</span>
+          <div><strong>Why this matters:</strong> The swarm model means every downloader also becomes an uploader — the more popular a file, the faster it spreads.</div>
+        </div>
+
         <div class="explanation-toggle">
           <button class="toggle-btn active" data-mode="simple">Simple</button>
           <button class="toggle-btn" data-mode="technical">Technical</button>
+          <button class="toggle-btn" data-mode="deep">Deep Dive</button>
         </div>
 
         <div class="explanation simple">
@@ -497,6 +678,15 @@
             <strong>tit-for-tat</strong> algorithm encourages uploading: peers who upload
             more get better download speeds ("unchoked"). Seeders have 100% of pieces;
             leechers download while simultaneously uploading what they have.
+          </p>
+        </div>
+        <div class="explanation deep hidden">
+          <p>
+            The tit-for-tat algorithm works in 10-second rounds: each peer "unchokes" (allows uploads to) its top
+            3 uploaders plus one random "optimistic unchoke" to discover new fast peers. Choked peers can only send
+            <em>interested</em> messages, not requests. The end-game mode triggers when a client has requested all
+            remaining pieces: it sends duplicate requests to all peers for the last few pieces to minimize tail
+            latency. DHT (BEP 5) allows trackerless peer discovery using a distributed key-value store.
           </p>
         </div>
 
@@ -550,6 +740,46 @@
           <h3>File Fully Distributed!</h3>
           <p>All peers now have all pieces — every single piece was verified using
             its SHA-1 hash before being shared onwards.</p>
+        </div><!-- /completion-message -->
+
+        <!-- Recap + Quiz (shown after simulation completes) -->
+        <div class="recap-section hidden" id="recapSection">
+          <div class="recap-header">
+            <div class="recap-icon">🎓</div>
+            <h3>You just created a torrent!</h3>
+            <p>Here's what happened step by step:</p>
+          </div>
+          <div class="recap-steps">
+            <div class="recap-step">
+              <span class="recap-num">1</span>
+              <div><strong>File loaded</strong> — read as raw bytes into an ArrayBuffer</div>
+            </div>
+            <div class="recap-step">
+              <span class="recap-num">2</span>
+              <div><strong>Pieces created</strong> — file split into equal-size chunks</div>
+            </div>
+            <div class="recap-step">
+              <span class="recap-num">3</span>
+              <div><strong>Hashes computed</strong> — SHA-1 fingerprint for every piece</div>
+            </div>
+            <div class="recap-step">
+              <span class="recap-num">4</span>
+              <div><strong>Metadata assembled</strong> — .torrent file built with all hashes</div>
+            </div>
+            <div class="recap-step">
+              <span class="recap-num">5</span>
+              <div><strong>Swarm simulated</strong> — peers exchanged pieces using rarest-first</div>
+            </div>
+          </div>
+
+          <div class="mini-quiz" id="miniQuiz">
+            <h4>🧠 Quick Quiz</h4>
+            <div class="quiz-questions" id="quizQuestions">
+              <!-- Rendered by JS -->
+            </div>
+            <div class="quiz-result hidden" id="quizResult"></div>
+            <button class="btn btn-primary hidden" id="submitQuizBtn">Submit Answers</button>
+          </div>
         </div>
 
       </div>
