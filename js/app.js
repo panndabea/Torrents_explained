@@ -43,7 +43,7 @@
     const prevEl = $(`step-${prev}`);
     const nextEl = $(`step-${n}`);
 
-    if (prevEl) prevEl.classList.add(n > prev ? 'exit-left' : 'exit-right');
+    if (prevEl && prevEl !== nextEl) prevEl.classList.add(n > prev ? 'exit-left' : 'exit-right');
     if (nextEl) {
       nextEl.classList.add(n > prev ? 'enter-right' : 'enter-left');
       requestAnimationFrame(() => {
