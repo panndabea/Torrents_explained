@@ -381,6 +381,10 @@
     if (oldBtn) {
       const newBtn = oldBtn.cloneNode(true);
       oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+      // Set max dynamically based on displayed range (first 32 bytes shown in hex preview)
+      const maxIdx = Math.min(31, new Uint8Array(piece0.data).length - 1);
+      const idxInput = $('flipByteIndex');
+      if (idxInput) idxInput.max = maxIdx;
       newBtn.addEventListener('click', async function() {
         const idx = parseInt($('flipByteIndex').value) || 0;
         const result = Hasher.flipSpecificByte(piece0.data, idx);
@@ -617,7 +621,7 @@
     container.dataset.bound = '1';
     $('submitPieceGuess').addEventListener('click', function() {
       const guess = parseInt($('pieceCountGuess').value);
-      if (isNaN(guess) || guess < 1) { showToast('Please enter a number'); return; }
+      if (isNaN(guess) || guess < 1) { showToast('Please enter a positive number'); return; }
       const actual = Math.ceil(state.fileData.size / state.pieceLength);
       const diff = Math.abs(guess - actual);
       const pct = Math.round((diff / actual) * 100);

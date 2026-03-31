@@ -76,8 +76,10 @@ const Hasher = (() => {
 
   /**
    * Return a copy of a piece's data with a specific byte modified.
+   * The byteIndex is clamped to [0, view.length - 1] if out of bounds.
+   * The bit position within the byte is chosen randomly.
    * @param {ArrayBuffer} pieceData
-   * @param {number} byteIndex  index to modify
+   * @param {number} byteIndex  index to modify (clamped to valid range)
    * @returns {{modified:ArrayBuffer, byteIndex:number, original:number, flipped:number}}
    */
   function flipSpecificByte(pieceData, byteIndex) {
