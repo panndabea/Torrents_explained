@@ -121,6 +121,7 @@
       dropZone.classList.remove('loading');
       dropZone.querySelector('.drop-icon').textContent = '✅';
       dropZone.querySelector('.drop-primary').textContent = file.name;
+      showToast(`✅ File loaded: ${FileProcessor.humanSize(file.size)}`, 'success');
       // Auto-advance to step 1
       setTimeout(() => goToStep(1), 400);
     } catch (err) {
@@ -153,6 +154,7 @@
   /* ── Step 2: Piece Size ── */
   function renderStep2() {
     updatePieceStats();
+    setupPieceCountPredict();
     // Only attach listeners once using a flag
     const sizeOptions = $('sizeOptions');
     if (!sizeOptions.dataset.bound) {
@@ -178,6 +180,14 @@
     $('statPieceSize').textContent = FileProcessor.humanPieceSize(state.pieceLength);
     $('statHashSize').textContent = FileProcessor.humanSize(n * 20);
     UI.renderPiecePreview(state.fileData.size, state.pieceLength, $('pieceSizePreview'));
+    // Reset predict widget on size change
+    const predictEl = $('predictPieces');
+    if (predictEl) {
+      const resultEl = $('pieceGuessResult');
+      if (resultEl) resultEl.classList.add('hidden');
+      const guessInput = $('pieceCountGuess');
+      if (guessInput) guessInput.value = '';
+    }
   }
 
   /* ── Step 3: Piece Visualization ── */
@@ -242,6 +252,8 @@
       return;
     }
 
+    setupHashPredict();
+
     const startBtn = $('startHashingBtn');
     startBtn.addEventListener('click', async function() {
       this.disabled = true;
@@ -263,6 +275,7 @@
         state.hashingDone = true;
         $('hashProgressLabel').textContent = '✅ Hashing complete!';
         this.style.display = 'none';
+        showToast(`🔐 Nice — ${state.hashes.length.toLocaleString()} piece hash${state.hashes.length !== 1 ? 'es' : ''} computed!`, 'success');
         setTimeout(showHashResults, 500);
       } catch (err) {
         this.disabled = false;
@@ -280,6 +293,11 @@
     const flipDemo = $('flipDemo');
     flipDemo.style.display = 'block';
     setupFlipDemo();
+
+    // Show error simulation
+    const errorSim = $('errorSim');
+    if (errorSim) errorSim.style.display = 'block';
+    setupErrorSim();
 
     // Show hash table
     const tableContainer = $('hashTableContainer');
@@ -330,18 +348,57 @@
 
     state.flippedData = null;
 
-    // Replace button to remove any previous listeners
-    const oldBtn = $('flipByteBtn');
-    const newBtn = oldBtn.cloneNode(true);
-    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-    newBtn.addEventListener('click', async function() {
-      const result = Hasher.flipRandomByte(piece0.data);
+    async function doFlip(result) {
       state.flippedData = result;
       const newHash = await Hasher.hashPiece(result.modified);
 
       renderHexBytes($('modifiedBytes'), new Uint8Array(result.modified, 0, 16), result.byteIndex);
       renderHashChunks($('modifiedHash'), newHash, hash0, newHash);
-    });
+
+      // Show byte info
+      const infoEl = $('flipByteInfo');
+      if (infoEl) {
+        infoEl.classList.remove('hidden');
+        $('flipInfoPos').textContent = result.byteIndex;
+        $('flipInfoOld').textContent = result.original.toString(16).padStart(2,'0');
+        $('flipInfoNew').textContent = result.flipped.toString(16).padStart(2,'0');
+      }
+      // Show badge
+      const badge = $('flipBadge');
+      if (badge) badge.style.display = '';
+
+      // Count changed hash chars and show summary
+      const changed = [...hash0].filter((c, i) => c !== newHash[i]).length;
+      const summaryEl = $('hashDiffSummary');
+      if (summaryEl) {
+        summaryEl.classList.remove('hidden');
+        summaryEl.innerHTML = `<strong>${changed}/40 hash characters changed</strong> (${Math.round(changed/40*100)}%) — that's the avalanche effect in action!`;
+      }
+    }
+
+    // Clone specific-byte button
+    const oldBtn = $('flipByteBtn');
+    if (oldBtn) {
+      const newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+      newBtn.addEventListener('click', async function() {
+        const idx = parseInt($('flipByteIndex').value) || 0;
+        const result = Hasher.flipSpecificByte(piece0.data, idx);
+        await doFlip(result);
+      });
+    }
+
+    // Clone random button
+    const oldRnd = $('flipRandomBtn');
+    if (oldRnd) {
+      const newRnd = oldRnd.cloneNode(true);
+      oldRnd.parentNode.replaceChild(newRnd, oldRnd);
+      newRnd.addEventListener('click', async function() {
+        const result = Hasher.flipRandomByte(piece0.data);
+        if ($('flipByteIndex')) $('flipByteIndex').value = result.byteIndex;
+        await doFlip(result);
+      });
+    }
   }
 
   function renderHexBytes(container, bytes, highlightIndex) {
@@ -489,8 +546,13 @@
       // Completion message
       if (distributed >= 100 && state.simRunning) {
         $('completionMessage').style.display = 'block';
-        $('completionMessage').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         state.simRunning = false;
+        // Show recap + quiz
+        const recap = $('recapSection');
+        if (recap) {
+          recap.classList.remove('hidden');
+          setTimeout(() => recap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300);
+        }
       }
     };
 
@@ -525,6 +587,9 @@
       $('completionMessage').style.display = 'none';
       state.sim.reset();
     });
+
+    // Setup quiz
+    setupRecapQuiz();
   }
 
   /* ── Explanation Toggles ── */
@@ -543,6 +608,190 @@
         el.classList.toggle('hidden', !el.classList.contains(mode));
       });
     });
+  }
+
+  /* ── Predict → Reveal: Step 2 piece count ── */
+  function setupPieceCountPredict() {
+    const container = $('predictPieces');
+    if (!container || container.dataset.bound) return;
+    container.dataset.bound = '1';
+    $('submitPieceGuess').addEventListener('click', function() {
+      const guess = parseInt($('pieceCountGuess').value);
+      if (isNaN(guess) || guess < 1) { showToast('Please enter a number'); return; }
+      const actual = Math.ceil(state.fileData.size / state.pieceLength);
+      const diff = Math.abs(guess - actual);
+      const pct = Math.round((diff / actual) * 100);
+      const resultEl = $('pieceGuessResult');
+      resultEl.classList.remove('hidden', 'correct', 'incorrect');
+      if (guess === actual) {
+        resultEl.className = 'predict-reveal-result correct';
+        resultEl.innerHTML = `✅ Exactly right! The file splits into <strong>${actual.toLocaleString()} pieces</strong>. Nice mental model!`;
+        showToast('🎉 Exactly right!', 'success');
+      } else if (pct <= 20) {
+        resultEl.className = 'predict-reveal-result correct';
+        resultEl.innerHTML = `👍 Very close! Actual answer: <strong>${actual.toLocaleString()} pieces</strong>. You were off by ${diff.toLocaleString()} (${pct}%).`;
+      } else {
+        resultEl.className = 'predict-reveal-result incorrect';
+        resultEl.innerHTML = `The actual answer is <strong>${actual.toLocaleString()} pieces</strong> (${FileProcessor.humanSize(state.fileData.size)} ÷ ${FileProcessor.humanPieceSize(state.pieceLength)}). Your guess was ${diff.toLocaleString()} ${guess < actual ? 'too low' : 'too high'}.`;
+      }
+    });
+  }
+
+  /* ── Predict → Reveal: Step 4 hash avalanche ── */
+  function setupHashPredict() {
+    const container = $('predictHash');
+    if (!container || container.dataset.bound) return;
+    container.dataset.bound = '1';
+    container.querySelectorAll('.predict-choice').forEach(btn => {
+      btn.addEventListener('click', function() {
+        container.querySelectorAll('.predict-choice').forEach(b => {
+          b.classList.remove('correct-ans', 'wrong-ans');
+        });
+        const isCorrect = this.dataset.answer === 'correct';
+        this.classList.add(isCorrect ? 'correct-ans' : 'wrong-ans');
+        // Mark the correct one too
+        container.querySelector('[data-answer="correct"]').classList.add('correct-ans');
+        const resultEl = $('hashPredictResult');
+        resultEl.classList.remove('hidden', 'correct', 'incorrect');
+        if (isCorrect) {
+          resultEl.className = 'predict-reveal-result correct';
+          resultEl.innerHTML = `✅ Correct! The avalanche effect means even a 1-bit change flips ~50% of the hash bits — typically almost all 40 hex characters change. This is what makes SHA-1 a reliable integrity check.`;
+          showToast('🎉 Correct! That\'s the avalanche effect.', 'success');
+        } else {
+          resultEl.className = 'predict-reveal-result incorrect';
+          resultEl.innerHTML = `The correct answer is <strong>"Almost all of them"</strong>. The avalanche effect means a single-bit input change statistically flips ~50% of output bits. Try the demo below to see it live!`;
+        }
+      });
+    });
+  }
+
+  /* ── Error Simulation ── */
+  function setupErrorSim() {
+    const btn = $('runErrorSimBtn');
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', async function() {
+      this.disabled = true;
+      const steps = ['errStep1','errStep2','errStep3','errStep4'];
+      const detail = $('errorSimDetail');
+
+      // Reset
+      steps.forEach(id => {
+        const el = $(id);
+        if (el) el.classList.remove('active','done-ok','done-fail');
+      });
+      detail.textContent = '';
+
+      const piece0 = state.pieces[0];
+      const expectedHash = state.hashes[0];
+
+      // Corrupt the piece
+      const corrupted = Hasher.flipRandomByte(piece0.data);
+
+      const animate = (stepId, cls, msg, delay) => new Promise(r => setTimeout(() => {
+        const el = $(stepId);
+        if (el) { el.classList.remove('active'); el.classList.add(cls); }
+        detail.textContent += msg + '\n';
+        r();
+      }, delay));
+
+      await animate('errStep1', 'active', '📦 Corrupted piece received…', 0);
+      await animate('errStep1', 'done-fail', '→ Piece data corrupted in transit', 600);
+      await animate('errStep2', 'active', '🔐 Computing SHA-1 of received data…', 800);
+      const receivedHash = await Hasher.hashPiece(corrupted.modified);
+      await animate('errStep2', 'done-ok', `→ Computed hash: ${receivedHash.slice(0,16)}…`, 1400);
+      await animate('errStep3', 'active', '⚖️ Comparing with expected hash…', 1800);
+      detail.textContent += `Expected:  ${expectedHash.slice(0,16)}…\n`;
+      detail.textContent += `Received:  ${receivedHash.slice(0,16)}…\n`;
+      await new Promise(r => setTimeout(r, 800));
+      await animate('errStep3', 'done-fail', '→ MISMATCH — hashes do not match!', 2600);
+      await animate('errStep4', 'active', '❌ Piece rejected — will re-download', 3000);
+      await animate('errStep4', 'done-fail', '→ Client queues piece for re-download', 3600);
+      detail.textContent += '\n✅ Result: Corrupt data never accepted. Re-download queued.';
+
+      this.disabled = false;
+      this.textContent = '↺ Run Again';
+    });
+  }
+
+  /* ── Recap + Mini Quiz ── */
+  function setupRecapQuiz() {
+    const quizContainer = $('quizQuestions');
+    if (!quizContainer || quizContainer.dataset.bound) return;
+    quizContainer.dataset.bound = '1';
+
+    const questions = [
+      {
+        q: 'Does a .torrent file contain the original file?',
+        options: ['Yes, the file is embedded in the .torrent', 'No — it only contains metadata and hashes', 'It contains a compressed version'],
+        correct: 1
+      },
+      {
+        q: 'Why are hashes needed for each piece?',
+        options: ['To compress data for faster download', 'To detect corrupt or tampered pieces before accepting them', 'To encrypt the pieces during transfer'],
+        correct: 1
+      },
+      {
+        q: 'Why split a file into pieces instead of downloading it whole?',
+        options: ['To make the file smaller on disk', 'So different peers can share different parts simultaneously', 'Because BitTorrent only supports small file sizes'],
+        correct: 1
+      }
+    ];
+
+    questions.forEach((q, qi) => {
+      const div = document.createElement('div');
+      div.className = 'quiz-question';
+      div.innerHTML = `<div class="quiz-q-text">${qi + 1}. ${q.q}</div>`;
+      const opts = document.createElement('div');
+      opts.className = 'quiz-options';
+      q.options.forEach((opt, oi) => {
+        const label = document.createElement('label');
+        label.className = 'quiz-option';
+        label.dataset.qi = qi;
+        label.dataset.oi = oi;
+        label.innerHTML = `<input type="radio" name="q${qi}" value="${oi}" style="display:none"> ${opt}`;
+        label.addEventListener('click', function() {
+          opts.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
+          this.classList.add('selected');
+          this.querySelector('input').checked = true;
+        });
+        opts.appendChild(label);
+      });
+      div.appendChild(opts);
+      quizContainer.appendChild(div);
+    });
+
+    const submitBtn = $('submitQuizBtn');
+    if (submitBtn) {
+      submitBtn.classList.remove('hidden');
+      submitBtn.addEventListener('click', function() {
+        let score = 0;
+        questions.forEach((q, qi) => {
+          const selected = quizContainer.querySelector(`[data-qi="${qi}"].selected`);
+          const allOpts = quizContainer.querySelectorAll(`[data-qi="${qi}"]`);
+          allOpts.forEach(o => {
+            const oi = parseInt(o.dataset.oi);
+            if (oi === q.correct) o.classList.add('correct');
+            else if (o.classList.contains('selected') && oi !== q.correct) o.classList.add('wrong');
+          });
+          if (selected && parseInt(selected.dataset.oi) === q.correct) score++;
+        });
+        this.disabled = true;
+        const resultEl = $('quizResult');
+        resultEl.classList.remove('hidden', 'good', 'ok', 'retry');
+        if (score === 3) {
+          resultEl.className = 'quiz-result good';
+          resultEl.textContent = '🎉 Perfect score! You truly understand how BitTorrent works.';
+          showToast('🏆 Perfect quiz score!', 'success');
+        } else if (score >= 2) {
+          resultEl.className = 'quiz-result ok';
+          resultEl.textContent = `👍 ${score}/3 correct. Good understanding — re-read the highlighted steps above!`;
+        } else {
+          resultEl.className = 'quiz-result retry';
+          resultEl.textContent = `${score}/3 correct. Go back through the steps and try again — you'll get there!`;
+        }
+      });
+    }
   }
 
   /* ── Utilities ── */
@@ -571,11 +820,11 @@
     });
   }
 
-  function showToast(msg) {
+  function showToast(msg, style) {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    toast.className = 'toast' + (style === 'success' ? ' toast-success' : '');
     toast.textContent = msg;
     document.body.appendChild(toast);
     setTimeout(() => toast.classList.add('visible'), 10);
