@@ -29,7 +29,6 @@
     if (n < 0 || n >= state.totalSteps) return;
     // Validate step requirements
     if (n >= 1 && !state.fileData) { showToast('Please select a file first'); return; }
-    if (n >= 3 && state.pieces.length === 0) { showToast('Please complete Step 2 first'); return; }
     if (n >= 4 && state.pieces.length === 0) { showToast('Please complete Step 3 first'); return; }
     if (n >= 5 && !state.hashingDone) { showToast('Please complete hashing in Step 4 first'); return; }
 

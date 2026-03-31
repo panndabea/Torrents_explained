@@ -293,8 +293,7 @@ const UI = (() => {
   }
 
   function formatHashDisplay(hash) {
-    if (!hash || hash.length === 0) return '';
-    return (hash.match(/.{1,8}/g) || [hash]).join(' ');
+    return Hasher.formatHash(hash);
   }
 
   function escapeHtml(str) {

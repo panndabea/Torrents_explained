@@ -54,7 +54,8 @@ const Hasher = (() => {
    * @returns {string}
    */
   function formatHash(hash) {
-    return hash.match(/.{1,8}/g).join(' ');
+    if (!hash || hash.length === 0) return '';
+    return (hash.match(/.{1,8}/g) || [hash]).join(' ');
   }
 
   const MAX_FLIP_BYTE_RANGE = 32; // flip only within first 32 bytes so the hex preview shows the change
