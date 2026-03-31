@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BitTorrent Explorer — Learn How Torrents Work</title>
+  <meta name="description" content="Learn how BitTorrent works by building a torrent from your own file — entirely in your browser, never uploaded.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ── Header with step indicator ── -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">BitTorrent Explorer</span>
+      </div>
+      <div id="stepIndicator"></div>
+    </div>
+  </header>
+
+  <!-- ── Main content ── -->
+  <main id="main">
+
+    <!-- ════════════════════════════════
+         STEP 0 — Landing
+         ════════════════════════════════ -->
+    <section class="step active" id="step-0">
+      <div class="step-content landing">
+
+        <div class="landing-hero">
+          <div class="animated-icon">
+            <div class="file-icon">
+              <div class="file-body">
+                <div class="file-corner"></div>
+                <div class="file-lines">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+            <div class="pieces-explosion" id="piecesExplosion"></div>
+          </div>
+
+          <h1>Understand BitTorrent by building a torrent from your own file</h1>
+          <p class="subtitle">
+            Drop any file and watch it get transformed into a torrent — step by step,
+            with real SHA-1 hashes computed in your browser.
+          </p>
+          <div class="privacy-badge">
+            <span>🔒</span>
+            <span>Processed locally in your browser —
+              <strong>your file never leaves your device</strong>
+            </span>
+          </div>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-inner">
+            <div class="drop-icon">📁</div>
+            <div class="drop-text">
+              <span class="drop-primary">Drag &amp; drop any file here</span>
+              <span class="drop-secondary">or</span>
+            </div>
+            <label class="btn btn-primary" for="fileInput">
+              Choose a File
+            </label>
+            <input type="file" id="fileInput" style="display:none" aria-label="Choose file">
+            <p class="drop-hint">
+              Works with any file type and size &mdash; processing happens entirely in your browser
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section><!-- /step-0 -->
+
+
+    <!-- ════════════════════════════════
+         STEP 1 — File Overview
+         ════════════════════════════════ -->
+    <section class="step" id="step-1">
+      <div class="step-content">
+
+        <div class="step-header">
+          <span class="step-number">Step 1</span>
+          <h2>Meet Your File</h2>
+        </div>
+
+        <div class="explanation-toggle">
+          <button class="toggle-btn active" data-mode="simple">Simple</button>
+          <button class="toggle-btn" data-mode="technical">Technical</button>
+        </div>
+
+        <div class="explanation simple">
+          <p>
+            Think of your file like a book. BitTorrent doesn't send the whole book at once.
+            Instead, it tears the book into hundreds of pages (pieces), then computes a unique
+            "fingerprint" for each page — so anyone can verify they got the right one.
+          </p>
+        </div>
+        <div class="explanation technical hidden">
+          <p>
+            BitTorrent uses a divide-and-verify approach. A file is split into fixed-size
+            <strong>pieces</strong>. Each piece gets a <strong>SHA-1 hash</strong>.
+            These hashes are stored in the <code>.torrent</code> metainfo file.
+            When a peer downloads a piece, it hashes it and compares to the expected hash —
+            ensuring data integrity even when downloading from untrusted peers.
+          </p>
+        </div>
+
+        <div class="file-overview-card">
+          <div class="file-visual">
+            <div class="file-icon-large">
+              <div class="file-doc">
+                <div class="file-doc-corner"></div>
+                <div class="file-doc-ext" id="fileExt">?</div>
+              </div>
+            </div>
+            <div class="file-info">
+              <div class="info-row">
+                <span class="info-label">Name</span>
+                <span class="info-value" id="fileName">—</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Size</span>
+                <span class="info-value" id="fileSize">—</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Type</span>
+                <span class="info-value" id="fileType">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="file-whole-bar">
+            <div class="file-bar-label">Your file as a single block</div>
+            <div class="file-bar" id="fileBarWhole">
+              <div class="file-bar-fill">
+                <span class="file-bar-text" id="fileBarText">…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section><!-- /step-1 -->
+
+
+    <!-- ════════════════════════════════
+         STEP 2 — Piece Size
+         ════════════════════════════════ -->
+    <section class="step" id="step-2">
+      <div class="step-content">
+
+        <div class="step-header">
+          <span class="step-number">Step 2</span>
+          <h2>Choose Your Piece Size</h2>
+        </div>
+
+        <div class="explanation-toggle">
+          <button class="toggle-btn active" data-mode="simple">Simple</button>
+          <button class="toggle-btn" data-mode="technical">Technical</button>
+        </div>
+
+        <div class="explanation simple">
+          <p>
+            How big should each "page" of the book be? Smaller pages mean more pages to track,
+            but you can download missing pages more precisely. Bigger pages are fewer but chunkier
+            — great for large files where overhead matters.
+          </p>
+        </div>
+        <div class="explanation technical hidden">
+          <p>
+            Piece size is a tradeoff between <strong>overhead</strong> and <strong>granularity</strong>.
+            Smaller pieces generate more SHA-1 hashes (larger <code>.torrent</code> file, more DHT
+            requests), but enable finer-grained download scheduling and faster piece completion.
+            Larger pieces reduce overhead but mean you must download more before verifying integrity.
+            Typical values range from 256 KiB (small files) to 4 MiB (large files &gt; 1 GB).
+          </p>
+        </div>
+
+        <div class="piece-size-selector">
+          <div class="size-options" id="sizeOptions">
+            <button class="size-option" data-size="16384">
+              <span class="size-label">16 KiB</span>
+              <span class="size-desc">Finest grain</span>
+            </button>
+            <button class="size-option active" data-size="262144">
+              <span class="size-label">256 KiB</span>
+              <span class="size-desc">Small files</span>
+            </button>
+            <button class="size-option" data-size="1048576">
+              <span class="size-label">1 MiB</span>
+              <span class="size-desc">Balanced</span>
+            </button>
+            <button class="size-option" data-size="4194304">
+              <span class="size-label">4 MiB</span>
+              <span class="size-desc">Large files</span>
+            </button>
+          </div>
+
+          <div class="piece-stats">
+            <div class="stat-card">
+              <div class="stat-value" id="statPieceCount">—</div>
+              <div class="stat-label">Total Pieces</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statPieceSize">—</div>
+              <div class="stat-label">Piece Size</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statHashSize">—</div>
+              <div class="stat-label">Hash Data</div>
+            </div>
+          </div>
+
+          <div id="pieceSizePreview"></div>
+        </div>
+
+      </div>
+    </section><!-- /step-2 -->
+
+
+    <!-- ════════════════════════════════
+         STEP 3 — Piece Visualization
+         ════════════════════════════════ -->
+    <section class="step" id="step-3">
+      <div class="step-content">
+
+        <div class="step-header">
+          <span class="step-number">Step 3</span>
+          <h2>Splitting Into Pieces</h2>
+        </div>
+
+        <div class="explanation-toggle">
+          <button class="toggle-btn active" data-mode="simple">Simple</button>
+          <button class="toggle-btn" data-mode="technical">Technical</button>
+        </div>
+
+        <div class="explanation simple">
+          <p>
+            Watch your file get sliced into equal-sized pieces. Each colored block is one piece.
+            Click any piece to see the actual bytes inside — this is the raw binary data that
+            BitTorrent will distribute across the network!
+          </p>
+        </div>
+        <div class="explanation technical hidden">
+          <p>
+            The file's bytes are sliced into contiguous, non-overlapping segments. Each piece has
+            a <code>start</code> and <code>end</code> byte offset. The last piece may be smaller
+            than the piece length. Pieces are identified by a zero-based index. Click any piece
+            to inspect its byte range and a hex dump of its first 32 bytes.
+          </p>
+        </div>
+
+        <div class="pieces-viz" id="piecesViz">
+          <div class="file-bar-container">
+            <div class="file-bar-label">Your file — click any piece to inspect it</div>
+            <div class="piece-bar" id="pieceBar"></div>
+          </div>
+
+          <div class="piece-detail-panel" id="pieceDetailPanel" style="display:none">
+            <div class="piece-detail-header">
+              <span class="piece-detail-title" id="pieceDetailTitle">Piece #0</span>
+              <button class="close-btn" id="closePieceDetail" aria-label="Close">✕</button>
+            </div>
+            <div class="piece-detail-body">
+              <div class="piece-detail-row">
+                <span class="piece-detail-label">Byte Range</span>
+                <span class="piece-detail-value" id="pieceByteRange">—</span>
+              </div>
+              <div class="piece-detail-row">
+                <span class="piece-detail-label">Size</span>
+                <span class="piece-detail-value" id="pieceSizeDetail">—</span>
+              </div>
+              <div class="piece-detail-row">
+                <span class="piece-detail-label">Hex Preview</span>
+                <span class="piece-detail-value" style="color:var(--text-muted);font-size:12px">(first 32 bytes)</span>
+              </div>
+              <div class="hex-preview" id="pieceHexPreview">—</div>
+            </div>
+          </div>
+
+          <div class="pieces-info-row">
+            <span id="piecesCountLabel">— pieces</span>
+            <span class="pieces-note" id="piecesNote"></span>
+          </div>
+        </div>
+
+      </div>
+    </section><!-- /step-3 -->
+
+
+    <!-- ════════════════════════════════
+         STEP 4 — Hashing
+         ════════════════════════════════ -->
+    <section class="step" id="step-4">
+      <div class="step-content">
+
+        <div class="step-header">
+          <span class="step-number">Step 4</span>
+          <h2>Computing Piece Hashes</h2>
+        </div>
+
+        <div class="explanation-toggle">
+          <button class="toggle-btn active" data-mode="simple">Simple</button>
+          <button class="toggle-btn" data-mode="technical">Technical</button>
+        </div>
+
+        <div class="explanation simple">
+          <p>
+            Each piece gets a unique "fingerprint" — a hash. Change even a single byte and the
+            fingerprint changes completely. This is how peers detect corrupt or tampered data.
+            It's like a tamper-evident seal on each page of your book.
+          </p>
+        </div>
+        <div class="explanation technical hidden">
+          <p>
+            BitTorrent uses <strong>SHA-1</strong> to hash each piece. SHA-1 produces a 160-bit
+            (20-byte, 40-hex-char) digest via the <code>SubtleCrypto</code> Web API —
+            the same API your browser uses for HTTPS. When a leecher downloads a piece, it hashes
+            the received bytes and compares against the expected hash from the
+            <code>.torrent</code> file. A mismatch means the piece is corrupt and must be
+            re-downloaded. This is the <strong>avalanche effect</strong>: tiny input changes
+            produce completely different outputs.
+          </p>
+        </div>
+
+        <div class="hashing-section">
+          <div class="hashing-controls">
+            <button class="btn btn-primary" id="startHashingBtn">
+              <span class="btn-icon">🔐</span>
+              Start Hashing All Pieces
+            </button>
+            <div class="hash-progress-container" id="hashProgressContainer" style="display:none">
+              <div class="hash-progress-bar">
+                <div class="hash-progress-fill" id="hashProgressFill"></div>
+              </div>
+              <span class="hash-progress-label" id="hashProgressLabel">Hashing…</span>
+            </div>
+          </div>
+
+          <!-- Interactive flip demo -->
+          <div class="flip-demo" id="flipDemo" style="display:none">
+            <div class="flip-demo-header">
+              <h3>🎲 Interactive Demo: The Avalanche Effect</h3>
+              <p>Flip a random bit in piece&nbsp;#0 — watch the hash change completely!</p>
+            </div>
+            <div class="flip-demo-body">
+              <div class="flip-cols">
+                <div class="flip-col">
+                  <div class="flip-label">Original Piece #0</div>
+                  <div class="hex-bytes" id="originalBytes"></div>
+                  <div class="flip-hash-label">SHA-1 Hash:</div>
+                  <div class="hash-display" id="originalHash"></div>
+                </div>
+                <div class="flip-arrow">↔</div>
+                <div class="flip-col">
+                  <div class="flip-label">
+                    Modified Piece #0
+                    <span class="badge-modified">1 byte flipped</span>
+                  </div>
+                  <div class="hex-bytes" id="modifiedBytes"></div>
+                  <div class="flip-hash-label">SHA-1 Hash:</div>
+                  <div class="hash-display" id="modifiedHash"></div>
+                </div>
+              </div>
+              <button class="btn btn-secondary" id="flipByteBtn">
+                🎲 Flip a Random Byte
+              </button>
+            </div>
+          </div>
+
+          <!-- Hash table -->
+          <div class="hash-table-container" id="hashTableContainer" style="display:none">
+            <div class="hash-table-header">
+              <span>Piece Hashes (SHA-1)</span>
+              <span class="hash-table-note" id="hashTableNote"></span>
+            </div>
+            <div class="hash-table" id="hashTable"></div>
+          </div>
+
+        </div>
+      </div>
+    </section><!-- /step-4 -->
+
+
+    <!-- ════════════════════════════════
+         STEP 5 — Torrent Metadata
+         ════════════════════════════════ -->
+    <section class="step" id="step-5">
+      <div class="step-content">
+
+        <div class="step-header">
+          <span class="step-number">Step 5</span>
+          <h2>Torrent Metadata Structure</h2>
+        </div>
+
+        <div class="explanation-toggle">
+          <button class="toggle-btn active" data-mode="simple">Simple</button>
+          <button class="toggle-btn" data-mode="technical">Technical</button>
+        </div>
+
+        <div class="explanation simple">
+          <p>
+            All the information about your file — its name, size, pieces, and all the fingerprints
+            — gets bundled into a tiny metadata file: the <code>.torrent</code> file. This is what
+            you share with others, <strong>not the file itself</strong>! Anyone with this file can
+            find peers and verify every piece they download.
+          </p>
+        </div>
+        <div class="explanation technical hidden">
+          <p>
+            The <code>.torrent</code> file contains a <strong>bencoded</strong> dictionary.
+            The critical <code>info</code> dictionary contains the file name, length,
+            piece length, and concatenated SHA-1 hashes. The <strong>info-hash</strong> —
+            SHA-1 of the bencoded info dictionary — uniquely identifies the torrent and is used
+            as the key in the <strong>DHT</strong> (Distributed Hash Table). Trackers,
+            magnet links (<code>magnet:?xt=urn:btih:&lt;info-hash&gt;</code>), and peers
+            all reference this hash.
+          </p>
+        </div>
+
+        <div class="meta-section">
+          <div class="meta-view-toggle">
+            <button class="toggle-btn active" id="metaHumanBtn">Human-readable</button>
+            <button class="toggle-btn" id="metaBencodeBtn">Bencode view</button>
+          </div>
+
+          <div id="metaHumanView">
+            <div class="meta-tree" id="metaTree">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <div id="metaBencodeView" class="hidden">
+            <div class="bencode-display" id="bencodeDisplay"></div>
+          </div>
+
+          <div class="info-hash-section">
+            <div class="info-hash-label">
+              <span class="fingerprint-icon">🔏</span>
+              <span>Info-Hash — Torrent Unique Identifier</span>
+            </div>
+            <div class="info-hash-display">
+              <code id="infoHashValue">Computing…</code>
+              <button class="copy-btn" id="copyInfoHash" title="Copy to clipboard">📋</button>
+            </div>
+            <p class="info-hash-note">
+              This 40-character hex string uniquely identifies this torrent.
+              It's used in magnet links (<code>magnet:?xt=urn:btih:&hellip;</code>)
+              and DHT lookups. Two identical files with different names produce different info-hashes.
+            </p>
+          </div>
+
+          <div class="download-section">
+            <button class="btn btn-accent" id="downloadTorrentBtn">
+              <span>⬇</span> Download .torrent File
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section><!-- /step-5 -->
+
+
+    <!-- ════════════════════════════════
+         STEP 6 — Network Simulation
+         ════════════════════════════════ -->
+    <section class="step" id="step-6">
+      <div class="step-content">
+
+        <div class="step-header">
+          <span class="step-number">Step 6</span>
+          <h2>Network Distribution Simulation</h2>
+        </div>
+
+        <div class="explanation-toggle">
+          <button class="toggle-btn active" data-mode="simple">Simple</button>
+          <button class="toggle-btn" data-mode="technical">Technical</button>
+        </div>
+
+        <div class="explanation simple">
+          <p>
+            Now imagine thousands of people sharing your file. Everyone downloads and uploads
+            simultaneously. The more popular a file, the faster it spreads. Your pieces are
+            verified against the fingerprints before being shared on —
+            <strong>bad data never propagates</strong>.
+          </p>
+        </div>
+        <div class="explanation technical hidden">
+          <p>
+            BitTorrent uses <strong>rarest-first</strong> piece selection — peers prefer
+            downloading pieces that fewer peers have, ensuring availability across the swarm.
+            Pieces are verified via SHA-1 before being uploaded to others. The
+            <strong>tit-for-tat</strong> algorithm encourages uploading: peers who upload
+            more get better download speeds ("unchoked"). Seeders have 100% of pieces;
+            leechers download while simultaneously uploading what they have.
+          </p>
+        </div>
+
+        <div class="sim-legend">
+          <div class="legend-item">
+            <div class="legend-dot seeder"></div><span>Seeder (100% of pieces)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot leecher"></div><span>Leecher (downloading)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot complete"></div><span>Complete (became seeder)</span>
+          </div>
+        </div>
+
+        <div class="sim-container">
+          <canvas id="simCanvas" aria-label="Network peer simulation"></canvas>
+        </div>
+
+        <div class="sim-controls">
+          <button class="btn btn-primary" id="simStartBtn">▶ Start Simulation</button>
+          <button class="btn btn-secondary" id="simResetBtn">↺ Reset</button>
+        </div>
+
+        <div class="sim-stats" id="simStats">
+          <div class="sim-stat">
+            <div class="sim-stat-value" id="simStatDistributed">0%</div>
+            <div class="sim-stat-label">Distributed</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-value" id="simStatSeeders">1</div>
+            <div class="sim-stat-label">Seeders</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-value" id="simStatLeechers">6</div>
+            <div class="sim-stat-label">Leechers</div>
+          </div>
+        </div>
+
+        <div class="rarest-first-section" id="rarestFirstSection">
+          <h3>🎯 Rarest-First Piece Selection</h3>
+          <p>
+            Highlighted pieces are the rarest — peers prioritize downloading these first
+            to maintain piece availability across the swarm.
+          </p>
+          <div class="rarest-bar" id="rarestBar"></div>
+        </div>
+
+        <div class="completion-message" id="completionMessage" style="display:none">
+          <div class="completion-icon">🎉</div>
+          <h3>File Fully Distributed!</h3>
+          <p>All peers now have all pieces — every single piece was verified using
+            its SHA-1 hash before being shared onwards.</p>
+        </div>
+
+      </div>
+    </section><!-- /step-6 -->
+
+  </main><!-- /main -->
+
+  <!-- ── Navigation bar ── -->
+  <nav class="step-nav" id="stepNav" aria-label="Step navigation">
+    <button class="btn btn-nav" id="prevBtn" disabled aria-label="Previous step">← Previous</button>
+    <div class="step-dots" id="stepDots" aria-hidden="true"></div>
+    <button class="btn btn-nav btn-nav-next" id="nextBtn" aria-label="Next step">Next →</button>
+  </nav>
+
+  <!-- Scripts loaded in dependency order -->
+  <script src="js/fileProcessor.js"></script>
+  <script src="js/hasher.js"></script>
+  <script src="js/torrentBuilder.js"></script>
+  <script src="js/networkSim.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
