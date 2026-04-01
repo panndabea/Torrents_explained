@@ -94,6 +94,34 @@ header {
   overflow: hidden;
 }
 
+.learning-progress {
+  width: 100%;
+  max-width: 1100px;
+  margin: 10px auto 0;
+  padding: 0 24px 12px;
+}
+
+.learning-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.learning-progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+  transition: width 0.35s ease;
+}
+
+.learning-progress-label {
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .step-ind-item {
   display: flex;
   flex-direction: column;
@@ -1199,6 +1227,11 @@ main {
   letter-spacing: 0.5px;
 }
 
+.hash-val.short,
+.hash-code.short {
+  letter-spacing: 1px;
+}
+
 .hash-more-row {
   padding: 14px 16px;
   font-size: 13px;
@@ -1233,6 +1266,30 @@ main {
   border-radius: 8px;
   padding: 3px;
   gap: 3px;
+}
+
+.meta-substep-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: -10px;
+}
+
+.meta-substep-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--accent-purple);
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.meta-substep-header h3 {
+  font-size: 16px;
+  color: var(--text-primary);
 }
 
 /* Meta Tree */
@@ -1964,6 +2021,18 @@ main {
   background: rgba(16,185,129,0.9);
   border-color: var(--accent-green);
   color: white;
+}
+
+/* Focus mode */
+body.focus-mode .step.active .step-content > * {
+  opacity: 0.32;
+  filter: saturate(0.65);
+  transition: opacity var(--transition), filter var(--transition);
+}
+
+body.focus-mode .step.active .step-content > *.focus-target {
+  opacity: 1;
+  filter: none;
 }
 
 /* ── Responsive ── */

@@ -18,6 +18,7 @@
       </div>
       <div id="stepIndicator"></div>
     </div>
+    <div id="learningProgress" class="learning-progress"></div>
   </header>
 
   <!-- ── Main content ── -->
@@ -581,6 +582,24 @@
         </div>
 
         <div class="meta-section">
+          <!-- Predict → Reveal: torrent content -->
+          <div class="predict-reveal" id="predictMeta">
+            <div class="predict-question">
+              <span class="predict-icon">🤔</span>
+              <strong>Prediction check:</strong> What does a <code>.torrent</code> file actually contain?
+            </div>
+            <div class="predict-choices">
+              <button class="predict-choice" data-answer="wrong">The full original file data</button>
+              <button class="predict-choice" data-answer="correct">Only metadata + piece hashes</button>
+              <button class="predict-choice" data-answer="wrong">Compressed file bytes</button>
+            </div>
+            <div class="predict-reveal-result hidden" id="metaPredictResult"></div>
+          </div>
+
+          <div class="meta-substep-header">
+            <span class="meta-substep-tag">Step 5A</span>
+            <h3>What is inside a torrent file?</h3>
+          </div>
           <div class="meta-view-toggle">
             <button class="toggle-btn active" id="metaHumanBtn">Human-readable</button>
             <button class="toggle-btn" id="metaBencodeBtn">Bencode view</button>
@@ -596,6 +615,10 @@
             <div class="bencode-display" id="bencodeDisplay"></div>
           </div>
 
+          <div class="meta-substep-header">
+            <span class="meta-substep-tag">Step 5B</span>
+            <h3>What is the info-hash?</h3>
+          </div>
           <div class="info-hash-section">
             <div class="info-hash-label">
               <span class="fingerprint-icon">🔏</span>

@@ -18,6 +18,14 @@
     sim: null,            // NetworkSimulation instance
     simRunning: false,
     flippedData: null,    // modified piece for flip demo
+    currentHashDisplayMode: 'short',
+    milestones: {
+      fileLoaded: false,
+      piecesCreated: false,
+      hashesComputed: false,
+      metadataAssembled: false,
+      swarmSimulated: false
+    }
   };
 
   /* ── DOM References ── */
@@ -59,6 +67,8 @@
 
     UI.updateStepIndicator(n, state.totalSteps, $('stepIndicator'));
     UI.updateStepDots(n, state.totalSteps, $('stepDots'));
+    applyFocusMode(n);
+    updateLearningProgress();
 
     // Run step-specific init
     onStepEnter(n, prev);
@@ -118,10 +128,12 @@
 
     try {
       state.fileData = await FileProcessor.processFile(file);
+      state.milestones.fileLoaded = true;
       dropZone.classList.remove('loading');
       dropZone.querySelector('.drop-icon').textContent = '✅';
       dropZone.querySelector('.drop-primary').textContent = file.name;
       showToast(`✅ File loaded: ${FileProcessor.humanSize(file.size)}`, 'success');
+      updateLearningProgress();
       // Auto-advance to step 1
       setTimeout(() => goToStep(1), 400);
     } catch (err) {
@@ -197,6 +209,8 @@
     // Split file into pieces if needed
     if (state.pieces.length === 0) {
       state.pieces = FileProcessor.splitIntoPieces(state.fileData.arrayBuffer, state.pieceLength);
+      state.milestones.piecesCreated = true;
+      updateLearningProgress();
     }
 
     const MAX_DISPLAY = 100;
@@ -273,6 +287,8 @@
         });
 
         state.hashingDone = true;
+        state.milestones.hashesComputed = true;
+        updateLearningProgress();
         $('hashProgressLabel').textContent = '✅ Hashing complete!';
         this.style.display = 'none';
         showToast(`🔐 Nice — ${state.hashes.length.toLocaleString()} piece hash${state.hashes.length !== 1 ? 'es' : ''} computed!`, 'success');
@@ -314,7 +330,8 @@
       row.style.setProperty('--piece-color', UI.getPieceColor(i));
       row.innerHTML = `
         <span class="hash-idx">#${i}</span>
-        <code class="hash-val">${UI.formatHashDisplay(hash)}</code>
+        <code class="hash-val short" data-full-hash="${hash}" data-state="short">${UI.shortHashDisplay(hash)}</code>
+        <button class="copy-btn-sm hash-toggle-btn" title="Expand hash" data-hash="${hash}">↕</button>
         <button class="copy-btn-sm" title="Copy hash" data-hash="${hash}">📋</button>
       `;
       table.appendChild(row);
@@ -333,8 +350,20 @@
 
     // Copy buttons in hash table
     table.addEventListener('click', e => {
+      const toggleBtn = e.target.closest('.hash-toggle-btn');
+      if (toggleBtn) {
+        const code = toggleBtn.parentElement.querySelector('.hash-val');
+        if (code) {
+          const full = code.dataset.fullHash || '';
+          const isShort = code.dataset.state !== 'full';
+          code.textContent = isShort ? UI.formatHashDisplay(full) : UI.shortHashDisplay(full);
+          code.dataset.state = isShort ? 'full' : 'short';
+          code.classList.toggle('short', !isShort);
+          toggleBtn.title = isShort ? 'Collapse hash' : 'Expand hash';
+        }
+      }
       const btn = e.target.closest('.copy-btn-sm');
-      if (btn && btn.dataset.hash) copyToClipboard(btn.dataset.hash, btn);
+      if (btn && btn.dataset.hash && !btn.classList.contains('hash-toggle-btn')) copyToClipboard(btn.dataset.hash, btn);
     });
   }
 
@@ -446,7 +475,11 @@
 
     if (!state.meta) {
       state.meta = TorrentBuilder.buildTorrentMeta(state.file, state.pieces, state.hashes, state.pieceLength);
+      state.milestones.metadataAssembled = true;
+      updateLearningProgress();
     }
+
+    setupMetaPredict();
 
     // Render human-readable tree (innerHTML replaces old content + old delegated listeners)
     const metaTree = $('metaTree');
@@ -465,6 +498,18 @@
         }
       }
       const copyBtn = e.target.closest('.copy-btn-sm');
+      const toggleBtn = e.target.closest('.hash-toggle-btn');
+      if (toggleBtn) {
+        const code = toggleBtn.parentElement.querySelector('.hash-code');
+        if (code) {
+          const full = code.dataset.fullHash || '';
+          const isShort = code.dataset.state !== 'full';
+          code.textContent = isShort ? UI.formatHashDisplay(full) : UI.shortHashDisplay(full);
+          code.dataset.state = isShort ? 'full' : 'short';
+          code.classList.toggle('short', !isShort);
+          toggleBtn.title = isShort ? 'Collapse hash' : 'Expand hash';
+        }
+      }
       if (copyBtn && copyBtn.dataset.hash) copyToClipboard(copyBtn.dataset.hash, copyBtn);
     });
 
@@ -551,6 +596,8 @@
       if (distributed >= 100 && state.simRunning) {
         $('completionMessage').style.display = 'block';
         state.simRunning = false;
+        state.milestones.swarmSimulated = true;
+        updateLearningProgress();
         // Show recap + quiz
         const recap = $('recapSection');
         if (recap) {
@@ -667,6 +714,72 @@
         }
       });
     });
+  }
+
+  /* ── Predict → Reveal: Step 5 metadata content ── */
+  function setupMetaPredict() {
+    const container = $('predictMeta');
+    if (!container || container.dataset.bound) return;
+    container.dataset.bound = '1';
+    container.querySelectorAll('.predict-choice').forEach(btn => {
+      btn.addEventListener('click', function() {
+        container.querySelectorAll('.predict-choice').forEach(b => {
+          b.classList.remove('correct-ans', 'wrong-ans');
+        });
+        const isCorrect = this.dataset.answer === 'correct';
+        this.classList.add(isCorrect ? 'correct-ans' : 'wrong-ans');
+        container.querySelector('[data-answer="correct"]').classList.add('correct-ans');
+        const resultEl = $('metaPredictResult');
+        resultEl.classList.remove('hidden', 'correct', 'incorrect');
+        if (isCorrect) {
+          resultEl.className = 'predict-reveal-result correct';
+          resultEl.innerHTML = '✅ Correct. A torrent is a recipe: file details, piece size, and piece hashes.';
+          showToast('Nice — you nailed what a .torrent contains.', 'success');
+        } else {
+          resultEl.className = 'predict-reveal-result incorrect';
+          resultEl.innerHTML = 'The right answer is <strong>metadata + hashes</strong>. The actual bytes are fetched from peers.';
+        }
+      });
+    });
+  }
+
+  function applyFocusMode(step) {
+    const stepEl = $(`step-${step}`);
+    if (!stepEl) return;
+    document.body.classList.add('focus-mode');
+    stepEl.querySelectorAll('.focus-target').forEach(el => el.classList.remove('focus-target'));
+    const selectors = {
+      1: ['.file-overview-card'],
+      2: ['.piece-size-selector', '#predictPieces'],
+      3: ['#piecesViz', '.piece-bar', '#pieceDetailPanel'],
+      4: ['.hashing-section', '#predictHash', '#flipDemo', '#errorSim', '#hashTableContainer'],
+      5: ['.meta-section', '#predictMeta', '#metaHumanView', '.info-hash-section'],
+      6: ['.sim-container', '.sim-controls', '#simStats', '#rarestFirstSection', '#recapSection']
+    };
+    (selectors[step] || ['.step-content']).forEach(sel => {
+      stepEl.querySelectorAll(sel).forEach(el => el.classList.add('focus-target'));
+    });
+  }
+
+  function updateLearningProgress() {
+    const container = $('learningProgress');
+    if (!container) return;
+    const milestones = [
+      ['File loaded', state.milestones.fileLoaded],
+      ['Pieces created', state.milestones.piecesCreated],
+      ['Hashes computed', state.milestones.hashesComputed],
+      ['Metadata assembled', state.milestones.metadataAssembled],
+      ['Swarm simulated', state.milestones.swarmSimulated]
+    ];
+    const completed = milestones.filter(m => m[1]).length;
+    const pct = Math.round((completed / milestones.length) * 100);
+    const currentLabel = milestones.find(m => !m[1])?.[0] || 'All milestones complete';
+    container.innerHTML = `
+      <div class="learning-progress-track">
+        <div class="learning-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="learning-progress-label">${completed}/${milestones.length} milestones complete • Current: ${currentLabel}</div>
+    `;
   }
 
   /* ── Error Simulation ── */
@@ -869,6 +982,7 @@
 
     UI.updateStepIndicator(0, state.totalSteps, $('stepIndicator'));
     UI.updateStepDots(0, state.totalSteps, $('stepDots'));
+    updateLearningProgress();
     goToStep(0);
   }
 

@@ -278,7 +278,8 @@ const UI = (() => {
                 ${showHashes.map((h, i) => `
                   <div class="hash-entry">
                     <span class="hash-index">#${i}</span>
-                    <code class="hash-code" style="border-left:3px solid ${getPieceColor(i)}">${formatHashDisplay(h)}</code>
+                    <code class="hash-code" data-full-hash="${h}" data-state="short" style="border-left:3px solid ${getPieceColor(i)}">${shortHashDisplay(h)}</code>
+                    <button class="copy-btn-sm hash-toggle-btn" data-hash="${h}" title="Expand hash">↕</button>
                     <button class="copy-btn-sm" data-hash="${h}" title="Copy hash">📋</button>
                   </div>
                 `).join('')}
@@ -294,6 +295,11 @@ const UI = (() => {
 
   function formatHashDisplay(hash) {
     return Hasher.formatHash(hash);
+  }
+
+  function shortHashDisplay(hash) {
+    if (!hash || hash.length < 8) return hash || '';
+    return `${hash.slice(0, 4)}...${hash.slice(-4)}`;
   }
 
   function escapeHtml(str) {
@@ -314,6 +320,7 @@ const UI = (() => {
     renderPiecePreview,
     buildMetaTreeHTML,
     formatHashDisplay,
+    shortHashDisplay,
     escapeHtml
   };
 })();
