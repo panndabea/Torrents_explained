@@ -24,6 +24,8 @@
   --radius-sm:     8px;
   --shadow:        0 4px 24px rgba(0,0,0,0.4);
   --shadow-lg:     0 8px 40px rgba(0,0,0,0.6);
+  --focus-mode-unfocused-opacity: 0.42;
+  --focus-mode-unfocused-saturation: 0.65;
   --transition:    0.25s cubic-bezier(0.4,0,0.2,1);
   --font:          'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
@@ -120,6 +122,51 @@ header {
   margin-top: 7px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.continuity-rail {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 10px;
+}
+
+.continuity-track {
+  background: rgba(15,23,42,0.65);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.continuity-piece {
+  height: 10px;
+  min-width: 4px;
+  border-radius: 3px;
+  background: #334155;
+  flex: 1;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.continuity-piece.active {
+  background: var(--accent-blue);
+}
+
+.continuity-piece.has-hash::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-green);
+}
+
+.continuity-piece.distributed {
+  box-shadow: 0 0 6px rgba(16,185,129,0.5);
 }
 
 .step-ind-item {
@@ -1272,7 +1319,7 @@ main {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: -10px;
+  margin-bottom: 0;
 }
 
 .meta-substep-tag {
@@ -2025,8 +2072,8 @@ main {
 
 /* Focus mode */
 body.focus-mode .step.active .step-content > * {
-  opacity: 0.32;
-  filter: saturate(0.65);
+  opacity: var(--focus-mode-unfocused-opacity);
+  filter: saturate(var(--focus-mode-unfocused-saturation));
   transition: opacity var(--transition), filter var(--transition);
 }
 

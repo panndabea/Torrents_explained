@@ -18,7 +18,6 @@
     sim: null,            // NetworkSimulation instance
     simRunning: false,
     flippedData: null,    // modified piece for flip demo
-    currentHashDisplayMode: 'short',
     milestones: {
       fileLoaded: false,
       piecesCreated: false,
@@ -31,6 +30,9 @@
   /* ── DOM References ── */
   const $ = id => document.getElementById(id);
   const $$ = sel => document.querySelectorAll(sel);
+  const CONTINUITY_MIN_PIECES = 8;
+  const CONTINUITY_MAX_PIECES = 32;
+  const CONTINUITY_EMPTY_COLOR = '#334155';
 
   /* ── Step Navigation ── */
   function goToStep(n) {
@@ -69,6 +71,7 @@
     UI.updateStepDots(n, state.totalSteps, $('stepDots'));
     applyFocusMode(n);
     updateLearningProgress();
+    updateContinuityRail();
 
     // Run step-specific init
     onStepEnter(n, prev);
@@ -134,6 +137,7 @@
       dropZone.querySelector('.drop-primary').textContent = file.name;
       showToast(`✅ File loaded: ${FileProcessor.humanSize(file.size)}`, 'success');
       updateLearningProgress();
+      updateContinuityRail();
       // Auto-advance to step 1
       setTimeout(() => goToStep(1), 400);
     } catch (err) {
@@ -211,6 +215,7 @@
       state.pieces = FileProcessor.splitIntoPieces(state.fileData.arrayBuffer, state.pieceLength);
       state.milestones.piecesCreated = true;
       updateLearningProgress();
+      updateContinuityRail();
     }
 
     const MAX_DISPLAY = 100;
@@ -289,6 +294,7 @@
         state.hashingDone = true;
         state.milestones.hashesComputed = true;
         updateLearningProgress();
+        updateContinuityRail();
         $('hashProgressLabel').textContent = '✅ Hashing complete!';
         this.style.display = 'none';
         showToast(`🔐 Nice — ${state.hashes.length.toLocaleString()} piece hash${state.hashes.length !== 1 ? 'es' : ''} computed!`, 'success');
@@ -353,14 +359,7 @@
       const toggleBtn = e.target.closest('.hash-toggle-btn');
       if (toggleBtn) {
         const code = toggleBtn.parentElement.querySelector('.hash-val');
-        if (code) {
-          const full = code.dataset.fullHash || '';
-          const isShort = code.dataset.state !== 'full';
-          code.textContent = isShort ? UI.formatHashDisplay(full) : UI.shortHashDisplay(full);
-          code.dataset.state = isShort ? 'full' : 'short';
-          code.classList.toggle('short', !isShort);
-          toggleBtn.title = isShort ? 'Collapse hash' : 'Expand hash';
-        }
+        if (code) toggleHashDisplay(code, toggleBtn);
       }
       const btn = e.target.closest('.copy-btn-sm');
       if (btn && btn.dataset.hash && !btn.classList.contains('hash-toggle-btn')) copyToClipboard(btn.dataset.hash, btn);
@@ -477,6 +476,7 @@
       state.meta = TorrentBuilder.buildTorrentMeta(state.file, state.pieces, state.hashes, state.pieceLength);
       state.milestones.metadataAssembled = true;
       updateLearningProgress();
+      updateContinuityRail();
     }
 
     setupMetaPredict();
@@ -501,14 +501,7 @@
       const toggleBtn = e.target.closest('.hash-toggle-btn');
       if (toggleBtn) {
         const code = toggleBtn.parentElement.querySelector('.hash-code');
-        if (code) {
-          const full = code.dataset.fullHash || '';
-          const isShort = code.dataset.state !== 'full';
-          code.textContent = isShort ? UI.formatHashDisplay(full) : UI.shortHashDisplay(full);
-          code.dataset.state = isShort ? 'full' : 'short';
-          code.classList.toggle('short', !isShort);
-          toggleBtn.title = isShort ? 'Collapse hash' : 'Expand hash';
-        }
+        if (code) toggleHashDisplay(code, toggleBtn);
       }
       if (copyBtn && copyBtn.dataset.hash) copyToClipboard(copyBtn.dataset.hash, copyBtn);
     });
@@ -535,6 +528,7 @@
       this.classList.add('active');
       $('metaHumanBtn').classList.remove('active');
     });
+    applyStepModeConstraints($('step-5'), getActiveMode($('step-5')));
 
     // Compute info-hash
     if (!state.infoHash) {
@@ -598,6 +592,7 @@
         state.simRunning = false;
         state.milestones.swarmSimulated = true;
         updateLearningProgress();
+        updateContinuityRail();
         // Show recap + quiz
         const recap = $('recapSection');
         if (recap) {
@@ -658,7 +653,32 @@
       step.querySelectorAll('.explanation').forEach(el => {
         el.classList.toggle('hidden', !el.classList.contains(mode));
       });
+      applyStepModeConstraints(step, mode);
     });
+  }
+
+  function getActiveMode(stepEl) {
+    // Every step has an .explanation-toggle with one active .toggle-btn carrying data-mode.
+    const activeModeButton = stepEl?.querySelector('.explanation-toggle .toggle-btn.active[data-mode]');
+    return activeModeButton?.dataset.mode || 'simple';
+  }
+
+  function applyStepModeConstraints(stepEl, mode) {
+    if (!stepEl || stepEl.id !== 'step-5') return;
+    const bencodeBtn = $('metaBencodeBtn');
+    const humanBtn = $('metaHumanBtn');
+    const humanView = $('metaHumanView');
+    const bencodeView = $('metaBencodeView');
+    if (!bencodeBtn || !humanBtn || !humanView || !bencodeView) return;
+
+    const hideBencode = mode === 'simple';
+    bencodeBtn.classList.toggle('hidden', hideBencode);
+    if (hideBencode) {
+      bencodeView.classList.add('hidden');
+      humanView.classList.remove('hidden');
+      bencodeBtn.classList.remove('active');
+      humanBtn.classList.add('active');
+    }
   }
 
   /* ── Predict → Reveal: Step 2 piece count ── */
@@ -720,7 +740,7 @@
   function setupMetaPredict() {
     const container = $('predictMeta');
     if (!container || container.dataset.bound) return;
-    container.dataset.bound = '1';
+    container.dataset.bound = 'true';
     container.querySelectorAll('.predict-choice').forEach(btn => {
       btn.addEventListener('click', function() {
         container.querySelectorAll('.predict-choice').forEach(b => {
@@ -765,21 +785,48 @@
     const container = $('learningProgress');
     if (!container) return;
     const milestones = [
-      ['File loaded', state.milestones.fileLoaded],
-      ['Pieces created', state.milestones.piecesCreated],
-      ['Hashes computed', state.milestones.hashesComputed],
-      ['Metadata assembled', state.milestones.metadataAssembled],
-      ['Swarm simulated', state.milestones.swarmSimulated]
+      { label: 'File loaded', completed: state.milestones.fileLoaded },
+      { label: 'Pieces created', completed: state.milestones.piecesCreated },
+      { label: 'Hashes computed', completed: state.milestones.hashesComputed },
+      { label: 'Metadata assembled', completed: state.milestones.metadataAssembled },
+      { label: 'Swarm simulated', completed: state.milestones.swarmSimulated }
     ];
-    const completed = milestones.filter(m => m[1]).length;
+    const completed = milestones.filter(milestone => milestone.completed).length;
     const pct = Math.round((completed / milestones.length) * 100);
-    const currentLabel = milestones.find(m => !m[1])?.[0] || 'All milestones complete';
+    const nextMilestoneLabel = milestones.find(milestone => !milestone.completed)?.label || 'All milestones complete';
     container.innerHTML = `
-      <div class="learning-progress-track">
+      <div class="learning-progress-track" role="progressbar" aria-label="Learning progress milestones" aria-valuemin="0" aria-valuemax="${milestones.length}" aria-valuenow="${completed}">
         <div class="learning-progress-fill" style="width:${pct}%"></div>
       </div>
-      <div class="learning-progress-label">${completed}/${milestones.length} milestones complete • Current: ${currentLabel}</div>
+      <div class="learning-progress-label">${completed}/${milestones.length} milestones complete • Current: ${nextMilestoneLabel}</div>
     `;
+  }
+
+  function updateContinuityRail() {
+    const el = $('continuityRail');
+    if (!el) return;
+    const displayPieceCount = Math.min(Math.max(state.pieces.length || 1, CONTINUITY_MIN_PIECES), CONTINUITY_MAX_PIECES);
+    let html = '<div class="continuity-track">';
+    for (let i = 0; i < displayPieceCount; i++) {
+      const hasPiece = state.pieces.length > 0;
+      const hasHash = state.hashes.length > i;
+      const distributed = state.milestones.swarmSimulated;
+      const active = hasPiece ? ' active' : '';
+      const hashCls = hasHash ? ' has-hash' : '';
+      const distCls = distributed ? ' distributed' : '';
+      html += `<div class="continuity-piece${active}${hashCls}${distCls}" style="background-color:${hasPiece ? UI.getPieceColor(i) : CONTINUITY_EMPTY_COLOR}"></div>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function toggleHashDisplay(codeEl, toggleBtn) {
+    const full = codeEl.dataset.fullHash || '';
+    const isShort = codeEl.dataset.state !== 'full';
+    codeEl.textContent = isShort ? UI.formatHashDisplay(full) : UI.shortHashDisplay(full);
+    codeEl.dataset.state = isShort ? 'full' : 'short';
+    codeEl.classList.toggle('short', !isShort);
+    toggleBtn.title = isShort ? 'Collapse hash' : 'Expand hash';
   }
 
   /* ── Error Simulation ── */
@@ -983,6 +1030,7 @@
     UI.updateStepIndicator(0, state.totalSteps, $('stepIndicator'));
     UI.updateStepDots(0, state.totalSteps, $('stepDots'));
     updateLearningProgress();
+    updateContinuityRail();
     goToStep(0);
   }
 
