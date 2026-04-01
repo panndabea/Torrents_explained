@@ -24,6 +24,8 @@
   --radius-sm:     8px;
   --shadow:        0 4px 24px rgba(0,0,0,0.4);
   --shadow-lg:     0 8px 40px rgba(0,0,0,0.6);
+  --focus-mode-unfocused-opacity: 0.42;
+  --focus-mode-unfocused-saturation: 0.65;
   --transition:    0.25s cubic-bezier(0.4,0,0.2,1);
   --font:          'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
@@ -92,6 +94,79 @@ header {
   flex: 1;
   gap: 0;
   overflow: hidden;
+}
+
+.learning-progress {
+  width: 100%;
+  max-width: 1100px;
+  margin: 10px auto 0;
+  padding: 0 24px 12px;
+}
+
+.learning-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.learning-progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+  transition: width 0.35s ease;
+}
+
+.learning-progress-label {
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.continuity-rail {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 10px;
+}
+
+.continuity-track {
+  background: rgba(15,23,42,0.65);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.continuity-piece {
+  height: 10px;
+  min-width: 4px;
+  border-radius: 3px;
+  background: #334155;
+  flex: 1;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.continuity-piece.active {
+  background: var(--accent-blue);
+}
+
+.continuity-piece.has-hash::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-green);
+}
+
+.continuity-piece.distributed {
+  box-shadow: 0 0 6px rgba(16,185,129,0.5);
 }
 
 .step-ind-item {
@@ -1199,6 +1274,11 @@ main {
   letter-spacing: 0.5px;
 }
 
+.hash-val.short,
+.hash-code.short {
+  letter-spacing: 1px;
+}
+
 .hash-more-row {
   padding: 14px 16px;
   font-size: 13px;
@@ -1233,6 +1313,30 @@ main {
   border-radius: 8px;
   padding: 3px;
   gap: 3px;
+}
+
+.meta-substep-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.meta-substep-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--accent-purple);
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.meta-substep-header h3 {
+  font-size: 16px;
+  color: var(--text-primary);
 }
 
 /* Meta Tree */
@@ -1964,6 +2068,18 @@ main {
   background: rgba(16,185,129,0.9);
   border-color: var(--accent-green);
   color: white;
+}
+
+/* Focus mode */
+body.focus-mode .step.active .step-content > * {
+  opacity: var(--focus-mode-unfocused-opacity);
+  filter: saturate(var(--focus-mode-unfocused-saturation));
+  transition: opacity var(--transition), filter var(--transition);
+}
+
+body.focus-mode .step.active .step-content > *.focus-target {
+  opacity: 1;
+  filter: none;
 }
 
 /* ── Responsive ── */
