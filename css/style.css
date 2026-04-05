@@ -22,8 +22,8 @@
   --border-light:  #cbd5e1;
   --radius:        8px;
   --radius-sm:     6px;
-  --selected-brightness: 1.6;
-  --selected-scale: 1.2;
+  --piece-selected-brightness: 1.6;
+  --piece-selected-scale: 1.2;
   --shadow:        none;
   --shadow-lg:     none;
   --focus-mode-unfocused-opacity: 0.42;
@@ -852,8 +852,8 @@ main {
 }
 
 .piece-block.selected {
-  filter: brightness(var(--selected-brightness));
-  transform: scaleY(var(--selected-scale));
+  filter: brightness(var(--piece-selected-brightness));
+  transform: scaleY(var(--piece-selected-scale));
   z-index: 2;
   outline: 2px solid var(--text-primary);
   border-radius: 2px;
