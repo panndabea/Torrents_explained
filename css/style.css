@@ -855,8 +855,8 @@ main {
 }
 
 .piece-block.selected {
-  filter: brightness(1.6) !important;
-  transform: none !important;
+  filter: brightness(1.6);
+  transform: none;
   z-index: 2;
   outline: 1px solid var(--text-primary);
   border-radius: 2px;
