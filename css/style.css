@@ -525,11 +525,6 @@ main {
   margin-bottom: 16px;
 }
 
-/* Animated file icon */
-.animated-icon {
-  display: none;
-}
-
 /* Drop Zone */
 .drop-zone {
   width: 100%;
@@ -856,7 +851,6 @@ main {
 
 .piece-block.selected {
   filter: brightness(1.6);
-  transform: scale(1);
   z-index: 2;
   outline: 2px solid var(--text-primary);
   border-radius: 2px;
