@@ -9,12 +9,12 @@
   --bg-secondary:  #ffffff;
   --bg-card:       #ffffff;
   --bg-elevated:   #f8fafc;
-  --accent-blue:   #111827;
-  --accent-purple: #111827;
-  --accent-green:  #111827;
-  --accent-orange: #111827;
-  --accent-pink:   #111827;
-  --accent-cyan:   #111827;
+  --accent-blue:   #2563eb;
+  --accent-purple: #6d28d9;
+  --accent-green:  #059669;
+  --accent-orange: #d97706;
+  --accent-pink:   #db2777;
+  --accent-cyan:   #0891b2;
   --text-primary:  #0f172a;
   --text-secondary:#334155;
   --text-muted:    #64748b;
@@ -530,82 +530,11 @@ main {
   display: none;
 }
 
-.file-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: floatIcon 3s ease-in-out infinite;
-}
-
-@keyframes floatIcon {
-  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
-  50% { transform: translate(-50%, -50%) translateY(-6px); }
-}
-
-.file-body {
-  width: 48px;
-  height: 58px;
-  background: var(--accent-blue);
-  border-radius: 6px 14px 6px 6px;
-  position: relative;
-}
-
-.file-corner {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 14px;
-  height: 14px;
-  background: #1d4ed8;
-  border-radius: 0 0 0 6px;
-}
-
-.file-lines {
-  position: absolute;
-  top: 20px;
-  left: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.file-lines span {
-  display: block;
-  height: 3px;
-  background: rgba(255,255,255,0.5);
-  border-radius: 2px;
-}
-.file-lines span:nth-child(1) { width: 28px; }
-.file-lines span:nth-child(2) { width: 22px; }
-.file-lines span:nth-child(3) { width: 18px; }
-
-/* Piece particles */
-.pieces-explosion { position: absolute; inset: 0; pointer-events: none; }
-
-.piece-particle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  animation: explode 2s ease-in-out infinite;
-  transform-origin: center;
-}
-
-@keyframes explode {
-  0%   { transform: translate(-50%,-50%) translate(0,0) scale(1); opacity: 0; }
-  20%  { opacity: 1; }
-  80%  { opacity: 1; }
-  100% { transform: translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(0.6); opacity: 0; }
-}
-
 /* Drop Zone */
 .drop-zone {
   width: 100%;
   max-width: 580px;
-  border: 1px solid var(--border);
+  border: 1px dashed var(--border-light);
   border-radius: 16px;
   background: var(--bg-card);
   transition: all var(--transition);
