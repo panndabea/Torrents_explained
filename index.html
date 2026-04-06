@@ -30,36 +30,64 @@
          ════════════════════════════════ -->
     <section class="step active" id="step-0">
       <div class="step-content landing">
+        <div class="landing-layout">
+          <div class="landing-content">
+            <p class="hero-eyebrow">Learn by doing</p>
+            <div class="landing-hero">
+              <h1>See exactly how torrents work, with your own file</h1>
+              <p class="subtitle">
+                Drop any file and we walk you through every core BitTorrent step —
+                piece splitting, hashing, metadata, and swarm distribution.
+              </p>
+              <div class="privacy-badge">
+                <span>🔒</span>
+                <span>100% local processing —
+                  <strong>your file never leaves your device</strong>
+                </span>
+              </div>
+            </div>
 
-        <div class="landing-hero">
-          <h1>Understand BitTorrent by building a torrent from your own file</h1>
-          <p class="subtitle">
-            Drop any file and watch it get transformed into a torrent — step by step,
-            with real SHA-1 hashes computed in your browser.
-          </p>
-          <div class="privacy-badge">
-            <span>🔒</span>
-            <span>Processed locally in your browser —
-              <strong>your file never leaves your device</strong>
-            </span>
+            <div class="hero-actions">
+              <label class="btn btn-primary btn-hero" for="fileInput">Choose a File</label>
+              <span class="hero-action-note">No upload, no account, no install</span>
+            </div>
+
+            <div class="trust-strip" aria-label="Key benefits">
+              <span class="trust-item">✓ Browser-only</span>
+              <span class="trust-item">✓ Real SHA-1 hashes</span>
+              <span class="trust-item">✓ Interactive visual steps</span>
+            </div>
+          </div>
+
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-inner">
+              <div class="drop-icon">📁</div>
+              <div class="drop-text">
+                <span class="drop-primary">Drag &amp; drop any file here</span>
+                <span class="drop-secondary">or click to choose</span>
+              </div>
+              <label class="btn btn-secondary" for="fileInput">Browse files</label>
+              <input type="file" id="fileInput" style="display:none" aria-label="Choose file">
+              <p class="drop-hint">
+                Works with any file type and size
+              </p>
+            </div>
           </div>
         </div>
 
-        <div class="drop-zone" id="dropZone">
-          <div class="drop-zone-inner">
-            <div class="drop-icon">📁</div>
-            <div class="drop-text">
-              <span class="drop-primary">Drag &amp; drop any file here</span>
-              <span class="drop-secondary">or</span>
-            </div>
-            <label class="btn btn-primary" for="fileInput">
-              Choose a File
-            </label>
-            <input type="file" id="fileInput" style="display:none" aria-label="Choose file">
-            <p class="drop-hint">
-              Works with any file type and size &mdash; processing happens entirely in your browser
-            </p>
-          </div>
+        <div class="value-grid" aria-label="What you will learn">
+          <article class="value-card">
+            <h3>1. Split into pieces</h3>
+            <p>Understand why chunking enables parallel download and resumability.</p>
+          </article>
+          <article class="value-card">
+            <h3>2. Verify with hashes</h3>
+            <p>See how integrity checks reject corrupted data automatically.</p>
+          </article>
+          <article class="value-card">
+            <h3>3. Build torrent metadata</h3>
+            <p>Learn what a <code>.torrent</code> file contains — and what it does not.</p>
+          </article>
         </div>
 
       </div>
