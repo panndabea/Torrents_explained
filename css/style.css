@@ -523,7 +523,7 @@ main {
 }
 
 .landing-hero h1 {
-  font-size: clamp(30px, 4vw, 48px);
+  font-size: clamp(32px, 4vw, 48px);
   font-weight: 900;
   line-height: 1.15;
   margin-bottom: 16px;
@@ -2147,9 +2147,7 @@ body.focus-mode .step.active .step-content > *.focus-target {
   .logo-text { display: none; }
   .step-header h2 { font-size: 20px; }
 
-  .landing-hero h1 {
-    font-size: clamp(27px, 9vw, 36px);
-  }
+  .landing-hero h1 { font-size: clamp(30px, 8vw, 36px); }
 
   .subtitle {
     font-size: 16px;
