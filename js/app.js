@@ -95,6 +95,8 @@
   function setupFileInput() {
     const dropZone = $('dropZone');
     const fileInput = $('fileInput');
+    const heroStartBtn = $('heroStartBtn');
+    const dropBrowseBtn = $('dropBrowseBtn');
 
     fileInput.addEventListener('change', e => {
       if (e.target.files[0]) handleFile(e.target.files[0]);
@@ -114,6 +116,17 @@
     dropZone.addEventListener('click', e => {
       if (e.target !== fileInput && !e.target.closest('label')) fileInput.click();
     });
+
+    if (heroStartBtn) {
+      heroStartBtn.addEventListener('click', () => {
+        dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fileInput.click();
+      });
+    }
+
+    if (dropBrowseBtn) {
+      dropBrowseBtn.addEventListener('click', () => fileInput.click());
+    }
   }
 
   async function handleFile(file) {
