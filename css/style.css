@@ -494,7 +494,7 @@ main {
 
 .landing-layout {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: 3fr 2fr;
   gap: 28px;
   align-items: start;
 }
@@ -2147,7 +2147,7 @@ body.focus-mode .step.active .step-content > *.focus-target {
   .logo-text { display: none; }
   .step-header h2 { font-size: 20px; }
 
-  .landing-hero h1 { font-size: clamp(30px, 8vw, 36px); }
+  .landing-hero h1 { font-size: clamp(30px, 4vw, 36px); }
 
   .subtitle {
     font-size: 16px;
