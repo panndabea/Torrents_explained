@@ -96,6 +96,7 @@
     const dropZone = $('dropZone');
     const fileInput = $('fileInput');
     const heroStartBtn = $('heroStartBtn');
+    const dropBrowseBtn = $('dropBrowseBtn');
 
     fileInput.addEventListener('change', e => {
       if (e.target.files[0]) handleFile(e.target.files[0]);
@@ -121,6 +122,10 @@
         dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
         fileInput.click();
       });
+    }
+
+    if (dropBrowseBtn) {
+      dropBrowseBtn.addEventListener('click', () => fileInput.click());
     }
   }
 
