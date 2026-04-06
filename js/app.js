@@ -995,27 +995,10 @@
     setTimeout(() => { toast.classList.remove('visible'); setTimeout(() => toast.remove(), 300); }, 3000);
   }
 
-  /* ── Landing animations ── */
-  function setupLandingAnimation() {
-    const container = $('piecesExplosion');
-    if (!container) return;
-    const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#06b6d4'];
-    for (let i = 0; i < 6; i++) {
-      const p = document.createElement('div');
-      p.className = 'piece-particle';
-      p.style.backgroundColor = colors[i];
-      p.style.setProperty('--dx', (Math.cos((i / 6) * Math.PI * 2) * 60) + 'px');
-      p.style.setProperty('--dy', (Math.sin((i / 6) * Math.PI * 2) * 60) + 'px');
-      p.style.animationDelay = (i * 0.15) + 's';
-      container.appendChild(p);
-    }
-  }
-
   /* ── Boot ── */
   function init() {
     setupFileInput();
     setupExplanationToggles();
-    setupLandingAnimation();
 
     $('prevBtn').addEventListener('click', () => goToStep(state.currentStep - 1));
     $('nextBtn').addEventListener('click', () => goToStep(state.currentStep + 1));
